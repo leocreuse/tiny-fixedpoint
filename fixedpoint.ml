@@ -8,7 +8,7 @@ let base_type = Ast.RealT
 let parse_param _ = ()
 
 let fprint_help fmt = Format.fprintf fmt "Fixedpoint abstraction"
-let log = false
+let log = true
 
 (* To implement your own non relational abstract domain,
  * first give the type of its elements, *)
@@ -71,7 +71,8 @@ let mk_fxd s msb lsb l = match msb, lsb, l with
   | None, _, _ -> Bot
   | _, _, z when z < 0 -> Bot
   | _, None, _ -> Fxd (s, msb, lsb, l)
-  | Some x, Some y, z when Q.leq x (Q.sub y (Q.of_int z)) -> Bot
+  | Some x, Some y, _ when Q.lt x y -> Bot
+  | Some x, Some y, z when Q.lt (Q.add (Q.sub x y ) Q.one) (Q.of_int z) -> Bot
   | _ -> Fxd (s, msb, lsb, l)
 
 (* All the functions below are safe overapproximations.
@@ -96,6 +97,8 @@ let widening = join  (* Ok, maybe you'll need to implement this one if your
                       * lattice has infinite ascending chains and you want
                       * your analyses to terminate. *)
 
+let is_int x = let cmp = (Q.compare x (Q.of_int (Q.to_int x))) in cmp = 0
+
 let find_params n =
   let msb =
     let rec aux n k =
@@ -111,7 +114,15 @@ let find_params n =
       then l 
       else aux n2 (msb - 1) (l + 1) in
   aux n msb 0 in
-  let lsb = msb - 64 in
+  let lsb = 
+      let rec find_lsb n msb k = 
+        if not (is_int n) then(*if number is not integer then lsb is negative *)
+          (if msb - k > 64 then k (*prevent LSB from going to -oo, only check wen decreasing the lsb*)
+          else find_lsb (Q.mul_2exp n 1) msb (k-1))
+        else let inte = (Q.to_int n) in
+          (if (inte mod 2) = 1 then k (*if number is integer and odd, then lsb = 0 *)
+          else find_lsb (Q.div_2exp n 1) msb (k+1)) in
+  (if Q.equal n Q.zero then 0 else find_lsb (Q.abs n) msb 0) in
   msb, lsb, g
 
 let sem_itv n1 n2 = let (x, _), (y, _) = n1, n2 in
