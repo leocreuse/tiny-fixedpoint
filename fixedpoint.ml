@@ -27,7 +27,7 @@ let fprint ff = function
                            let print_sign b = match b with
                              | None -> "+-"
                              | Some x -> if x then "+" else "-" in
-                           Format.fprintf ff "%s" (print_sign (s) ^" {"^(print_left msb)^ " .. "^(print_right lsb)^"}" ^ ", prefix =" ^ string_of_int l)
+                           Format.fprintf ff "%s" (print_sign (s) ^"{"^(print_left msb)^ " .. "^(print_right lsb)^"}" ^ ", prefix=" ^ string_of_int l)
 
 let sign_order s1 s2 = match s1, s2 with
   | _, None -> true
@@ -53,7 +53,7 @@ let equal_qt_opt x y = match x, y with
 
 (* the order of the lattice. *)
 let order x y = match x, y with
-  | Bot, _ | Zero, Fxd (_, _, _, 0) -> true
+  | Bot, _ | Zero, Fxd (_, _, _, 0) | Zero , Zero-> true
   | Fxd (s1, msb1, lsb1, l1), Fxd (s2, msb2, lsb2, l2) ->
       (sign_order s1 s2) &&
       (leq_minf lsb2 lsb1) &&
@@ -95,10 +95,10 @@ let meet x y = if (order x y) then x else (if (order y x) then y else Bot)
 
 let widening x y =match x, y with
 | Bot, n | n, Bot | Zero, n | n, Zero -> n
-| Fxd(sgn1, msb1, lsb1, g1), Fxd(sgn2, msb2, lsb2, g2) -> mk_fxd (if sgn1 != sgn2 then None else sgn2) 
-                                                            (if (leq_pinf msb1 msb2) then (if leq_pinf msb2 (Some Q.zero) then (Some Q.zero) else None) else msb1) 
-                                                            (if (leq_minf lsb1 lsb2) then lsb1 else (if leq_minf (Some Q.zero) lsb2 then (Some Q.zero) else None))
-                                                            (if g1 < g2 then g1 else g2)
+| Fxd(sgn1, msb1, lsb1, g1), Fxd(sgn2, msb2, lsb2, g2) ->   Fxd((if sgn1 = sgn2 then sgn1 else None) ,
+                                                            (if (leq_pinf msb2 msb1) then msb1 else (if leq_pinf msb2 (Some Q.zero) then (Some Q.zero) else None)) ,
+                                                            (if (leq_minf lsb1 lsb2) then lsb1 else (if leq_minf (Some Q.zero) lsb2 then (Some Q.zero) else None)),
+                                                            (if g1 < g2 then g1 else g2))
 
 let is_int x = let cmp = (Q.compare x (Q.of_int (Q.to_int x))) in cmp = 0
 
@@ -133,19 +133,19 @@ let sem_itv n1 n2 = let (x, _), (y, _) = n1, n2 in
                         | _, _ when x > y -> bottom
                         | _, _ when x = y && x = Q.zero -> Zero
                         | _, _ when x = y ->
-			  let s = Some(Q.gt x Q.zero) in
+			  let s = Some(Q.geq x Q.zero) in
 			  let msbx, lsbx, gx = find_params x in
 			  let msb = Some (Q.of_int (msbx)) in
 			  let lsb = Some (Q.of_int (lsbx)) in
 			  mk_fxd s msb lsb gx
                         | _ ->
-			  let sx = Some(Q.gt x Q.zero) in
+			  let sx = (Q.compare x Q.zero) in
 			  let msbx, lsbx, gx = find_params x in
 			  let msbxx = Some (Q.of_int (msbx)) in
-			  let sy = Some(Q.gt y Q.zero) in
+			  let sy = (Q.compare y Q.zero) in
 			  let msby, lsby, gy = find_params y in
 			  let msbyy = Some (Q.of_int (msby)) in
-			  join (mk_fxd sx msbxx None gx) (mk_fxd sy msbyy None gy)
+			  join (mk_fxd (Some (if sx=0 then sy>0 else sx>0)) msbxx None gx) (mk_fxd (Some (if sy=0 then sx>0 else sy>0)) msbyy None gy)
 
 let max_pinf q1 q2 = if leq_pinf q1 q2 then q2 else q1
 
@@ -235,8 +235,8 @@ let sem_div x y = top
 let sem_geq0 x = match x with
 |Zero -> Zero
 |Fxd(None, msb, lsb, g) 
-|Fxd(Some true, msb, lsb, g) ->Printf.eprintf("cool B)\n"); Fxd(Some true, msb, lsb, g)
-|_ -> Printf.eprintf("lol\n"); Bot 
+|Fxd(Some true, msb, lsb, g) -> Fxd(Some true, msb, lsb, g)
+|_ -> Bot 
 
 let sem_call _ _ = top
 
