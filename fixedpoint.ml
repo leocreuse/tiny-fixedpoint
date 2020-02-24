@@ -57,8 +57,8 @@ let order x y = match x, y with
   | Fxd (s1, msb1, lsb1, l1), Fxd (s2, msb2, lsb2, l2) ->
       (sign_order s1 s2) &&
       (leq_minf lsb2 lsb1) &&
-      (l2 = 0 || not (leq_pinf msb1 msb2)) &&
-      (equal_qt_opt msb1 msb2 || l2 > l1)
+      (not (leq_pinf msb2 msb1)) && 
+      (l2 = 0 || ((equal_qt_opt msb1 msb2) && l2 <= l1))
   | _ -> false
      
 (* and infimums of the lattice. *)
@@ -109,7 +109,7 @@ let find_params n =
     let rec aux n msb l =
       if l = 64 then l
       else
-      let n2 = Q.sub n (Q.mul_2exp Q.one msb) in
+      let n2 = Q.sub n (if msb < 0 then (Q.div_2exp Q.one, -msb) else (Q.mul_2exp Q.one msb)) in
       if Q.lt n2 Q.zero
       then l 
       else aux n2 (msb - 1) (l + 1) in
