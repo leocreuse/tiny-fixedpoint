@@ -57,7 +57,7 @@ let order x y = match x, y with
   | Fxd (s1, msb1, lsb1, l1), Fxd (s2, msb2, lsb2, l2) ->
       (sign_order s1 s2) &&
       (leq_minf lsb2 lsb1) &&
-      (not (leq_pinf msb2 msb1)) && 
+      (leq_pinf msb1 msb2) && 
       (l2 = 0 || ((equal_qt_opt msb1 msb2) && l2 <= l1))
   | _ -> false
      
@@ -91,11 +91,14 @@ let join x y = match x, y with
       mk_fxd s msb lsb l
   | _ -> top
 
-let meet x y = if (order x y) then x else Bot
+let meet x y = if (order x y) then x else (if (order y x) then y else Bot)
 
-let widening = join  (* Ok, maybe you'll need to implement this one if your
-                      * lattice has infinite ascending chains and you want
-                      * your analyses to terminate. *)
+let widening x y =match x, y with
+| Bot, n | n, Bot | Zero, n | n, Zero -> n
+| Fxd(sgn1, msb1, lsb1, g1), Fxd(sgn2, msb2, lsb2, g2) -> mk_fxd (if sgn1 != sgn2 then None else sgn2) 
+                                                            (if (leq_pinf msb1 msb2) then (if leq_pinf msb2 (Some Q.zero) then (Some Q.zero) else None) else msb1) 
+                                                            (if (leq_minf lsb1 lsb2) then lsb1 else (if leq_minf (Some Q.zero) lsb2 then (Some Q.zero) else None))
+                                                            (if g1 < g2 then g1 else g2)
 
 let is_int x = let cmp = (Q.compare x (Q.of_int (Q.to_int x))) in cmp = 0
 
@@ -229,7 +232,11 @@ let sem_times x y = match x, y with
     
 let sem_div x y = top
 	  
-let sem_geq0 x = meet x (Fxd (Some true, None, None, 0)) 
+let sem_geq0 x = match x with
+|Zero -> Zero
+|Fxd(None, msb, lsb, g) 
+|Fxd(Some true, msb, lsb, g) ->Printf.eprintf("cool B)\n"); Fxd(Some true, msb, lsb, g)
+|_ -> Printf.eprintf("lol\n"); Bot 
 
 let sem_call _ _ = top
 
