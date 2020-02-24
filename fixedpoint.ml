@@ -144,12 +144,91 @@ let sem_itv n1 n2 = let (x, _), (y, _) = n1, n2 in
 			  let msbyy = Some (Q.of_int (msby)) in
 			  join (mk_fxd sx msbxx None gx) (mk_fxd sy msbyy None gy)
 
+let max_pinf q1 q2 = if leq_pinf q1 q2 then q2 else q1
 
-let sem_plus x y = top
-let sem_minus x y = top
-let sem_times x y = top
+let min_minf q1 q2 = if leq_minf q1 q2 then q1 else q2
+
+let mk_opposite_fxd x = match x with
+  | Bot -> bottom
+  | Zero -> Zero
+  | Fxd (s, msb, lsb, l) -> let sign = match s with
+                              | None -> None
+                              | Some b -> Some (not b) in
+			    mk_fxd sign msb lsb l
+
+let is_power_of_two x = match x with
+  | Bot | Zero -> false
+  | Fxd (s, msb, lsb, l) -> msb = lsb && l = 1
+
+let incr x = match x with
+  | None -> None
+  | Some (t) -> Some (Q.add t Q.one)
+
+let sem_plus x y = match x, y with
+  | Bot, _ | _, Bot -> bottom
+  | Zero, z | z, Zero -> Zero
+  | Fxd (Some s1, Some msb1 , lsb1, l1), Fxd (Some s2, Some msb2, lsb2, l2) when l1 != 0 && l2 != 0 && s1 = not s2 ->
+    	let lsb = min_minf lsb1 lsb2 in
+        let msb = if Q.equal msb1 msb2
+	    	  then Some (Q.sub msb1 (Q.of_int (if l1 < l2 then l1 else l2)))
+		  else (if Q.gt msb1 msb2
+           		then Some (msb1)
+		        else Some (msb2)) in
+        let l = if Q.equal msb1 msb2
+	      	then 0
+		else (if Q.gt msb1 msb2 then (if Q.lt msb2 (Q.sub msb1 (Q.of_int l1))
+		     	      	              then l1
+					      else Q.to_int (Q.sub msb1 msb2))
+		      else (if Q.lt msb1 (Q.sub msb2 (Q.of_int l2))
+		            then l2
+			    else Q.to_int (Q.sub msb2 msb1))) in
+  	let s = if Q.equal msb1 msb2
+	      	then None
+		else (if Q.gt msb1 msb2
+		      then Some (s1)
+		      else Some (s2)) in
+        mk_fxd s msb lsb l
+   | Fxd (Some s1, Some msb1, Some lsb1, l1), Fxd (Some s2, Some msb2, Some lsb2, l2) ->
+     if Q.gt lsb1 msb2 then mk_fxd (Some s1) (Some msb1) (Some lsb2) l1
+     else (if Q.gt lsb2 msb1 then mk_fxd (Some s2) (Some msb2) (Some lsb1) l2
+           else mk_fxd None (Some (Q.add (Q.max msb1 msb2) Q.one)) (Some (Q.min lsb1 lsb2)) 0)
+   | Fxd (s1, msb1, lsb1, l1), Fxd (s2, msb2, lsb2, l2) ->
+     mk_fxd None (incr (max_pinf msb1 msb2)) (min_minf lsb1 lsb2) 0
+     
+let sem_minus x y = match x, y with
+  | Bot, _ | _, Bot -> bottom
+  | z, Zero -> z
+  | Zero, z -> mk_opposite_fxd z
+  | _ -> sem_plus x (mk_opposite_fxd y)
+
+let sem_times x y = match x, y with
+  | Bot, _ | _, Bot -> bottom
+  | Zero, _ | _, Zero -> Zero
+  | Fxd (s1, Some msb1, Some lsb1, l1), Fxd (s2, Some msb2, _, _) when is_power_of_two y ->
+    	let s = match s1, s2 with
+	  | None, _ | _, None -> None
+	  | Some s1, Some s2 -> Some (s1 = s2) in
+	mk_fxd s (Some (Q.add msb1 msb2)) (Some (Q.add lsb1 msb2)) l1
+  | Fxd (s1, Some msb1, _, _), Fxd (s2, Some msb2, Some lsb2, l2) when is_power_of_two x ->
+    let s = match s1, s2 with
+	  | None, _ | _, None -> None
+	  | Some s1, Some s2 -> Some (s1 = s2) in
+	mk_fxd s (Some (Q.add msb2 msb1)) (Some (Q.add lsb2 msb1)) l2
+  | Fxd (s1, msb1, lsb1, l1), Fxd (s2, msb2, lsb2, l2) ->
+    let s = match s1, s2 with
+      | None, _ | _, None -> None
+      | Some s1, Some s2 -> Some (s1 = s2) in
+    let msb = match msb1, msb2 with
+      | None, _ | _, None -> None
+      | Some a1, Some a2 -> Some (Q.add (Q.add a1 a2) Q.one) in
+    let lsb = match lsb1, lsb2 with
+      | None, _ | _, None -> None
+      | Some a1, Some a2 -> Some (Q.add a1 a2) in
+    let l = if l1 > 0 && l2 > 0 then 1 else 0 in
+    mk_fxd s msb lsb l
+    
 let sem_div x y = top
-
+	  
 let sem_geq0 x = meet x (Fxd (Some true, None, None, 0)) 
 
 let sem_call _ _ = top
