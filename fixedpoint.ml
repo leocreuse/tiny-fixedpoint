@@ -109,7 +109,7 @@ let find_params n =
     let rec aux n msb l =
       if l = 64 then l
       else
-      let n2 = Q.sub n (if msb < 0 then (Q.div_2exp Q.one, -msb) else (Q.mul_2exp Q.one msb)) in
+      let n2 = Q.sub n (if msb < 0 then (Q.div_2exp Q.one  (-msb)) else (Q.mul_2exp Q.one msb)) in
       if Q.lt n2 Q.zero
       then l 
       else aux n2 (msb - 1) (l + 1) in
