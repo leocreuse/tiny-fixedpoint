@@ -100,7 +100,7 @@ let widening x y =match x, y with
                                                             (if (leq_minf lsb1 lsb2) then lsb1 else (if leq_minf (Some Q.zero) lsb2 then (Some Q.zero) else None)),
                                                             (if g1 < g2 then g1 else g2))
 
-let is_int x = let cmp = (Q.compare x (Q.of_int (Q.to_int x))) in cmp = 0
+let is_int x = (Z.rem (Q.num x) (Q.den x) = Z.zero)
 
 let find_params n =
   let msb =
@@ -118,9 +118,9 @@ let find_params n =
       else aux n2 (msb - 1) (l + 1) in
   aux n msb 0 in
   let lsb = 
-      let rec find_lsb n msb k = 
+      let rec find_lsb n msb k =
         if not (is_int n) then(*if number is not integer then lsb is negative *)
-          (if msb - k > 64 then k (*prevent LSB from going to -oo, only check wen decreasing the lsb*)
+          (if msb - k >= 63 then k (*prevent LSB from going to -oo, only check when decreasing the lsb*)
           else find_lsb (Q.mul_2exp n 1) msb (k-1))
         else let inte = (Q.to_int n) in
           (if (inte mod 2) = 1 then k (*if number is integer and odd, then lsb = 0 *)
