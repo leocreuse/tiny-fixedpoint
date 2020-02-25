@@ -194,9 +194,12 @@ let sem_plus x y = match x, y with
    | Fxd (Some s1, Some msb1, Some lsb1, l1), Fxd (Some s2, Some msb2, Some lsb2, l2) ->
      if Q.gt lsb1 msb2 then mk_fxd (Some s1) (Some msb1) (Some lsb2) l1
      else (if Q.gt lsb2 msb1 then mk_fxd (Some s2) (Some msb2) (Some lsb1) l2
-           else mk_fxd None (Some (Q.add (Q.max msb1 msb2) Q.one)) (Some (Q.min lsb1 lsb2)) 0)
+           else mk_fxd (if s1 = s2 then (Some s1) else None) (Some (Q.add (Q.max msb1 msb2) (if s1 = not s2 then Q.zero else Q.one))) (Some (Q.min lsb1 lsb2)) 0)
+   | Fxd (Some s1, Some msb1, lsb1, l1), Fxd (Some s2, Some msb2, lsb2, l2) ->
+     mk_fxd (if s1 = s2 then (Some s1) else None) (Some (Q.add (Q.max msb1 msb2) (if s1 = not s2 then Q.zero else Q.one))) (min_minf lsb1 lsb2) 0
+
    | Fxd (s1, msb1, lsb1, l1), Fxd (s2, msb2, lsb2, l2) ->
-     mk_fxd None (incr (max_pinf msb1 msb2)) (min_minf lsb1 lsb2) 0
+     mk_fxd (if s1 = s2 then s1 else None) (incr (max_pinf msb1 msb2)) (min_minf lsb1 lsb2) 0
      
 let sem_minus x y = match x, y with
   | Bot, _ | _, Bot -> bottom
