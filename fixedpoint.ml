@@ -169,7 +169,7 @@ let incr x = match x with
 
 let sem_plus x y = match x, y with
   | Bot, _ | _, Bot -> bottom
-  | Zero, z | z, Zero -> Zero
+  | Zero, z | z, Zero -> z
   | Fxd (Some s1, Some msb1 , lsb1, l1), Fxd (Some s2, Some msb2, lsb2, l2) when l1 != 0 && l2 != 0 && s1 = not s2 ->
     	let lsb = min_minf lsb1 lsb2 in
         let msb = if Q.equal msb1 msb2
