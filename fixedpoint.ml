@@ -172,24 +172,14 @@ let sem_plus x y = match x, y with
   | Zero, z | z, Zero -> z
   | Fxd (Some s1, Some msb1 , lsb1, l1), Fxd (Some s2, Some msb2, lsb2, l2) when l1 != 0 && l2 != 0 && s1 = not s2 ->
     	let lsb = min_minf lsb1 lsb2 in
-        let msb = if Q.equal msb1 msb2
-	    	  then Some (Q.sub msb1 (Q.of_int (if l1 < l2 then l1 else l2)))
-		  else (if Q.gt msb1 msb2
-           		then Some (msb1)
-		        else Some (msb2)) in
-        let l = if Q.equal msb1 msb2
-	      	then 0
-		else (if Q.gt msb1 msb2 then (if Q.lt msb2 (Q.sub msb1 (Q.of_int l1))
-		     	      	              then l1
-					      else Q.to_int (Q.sub msb1 msb2))
-		      else (if Q.lt msb1 (Q.sub msb2 (Q.of_int l2))
-		            then l2
-			    else Q.to_int (Q.sub msb2 msb1))) in
-  	let s = if Q.equal msb1 msb2
-	      	then None
-		else (if Q.gt msb1 msb2
-		      then Some (s1)
-		      else Some (s2)) in
+	let msb, l, s = if Q.equal msb1 msb2
+	                then Some (Q.sub msb1 (Q.of_int (if l1 < l2 then l1 else l2))), 0, None
+			else (if Q.gt msb1 msb2 then (if Q.lt msb2 (Q.sub msb1 (Q.of_int l1))
+			                              then Some msb1, l1, Some s1
+						      else Some msb1, Q.to_int (Q.sub msb1 msb2), Some s1)
+			      else (if Q.lt msb1 (Q.sub msb2 (Q.of_int l2))
+			            then Some msb2, l2, Some s2
+				    else Some msb2, Q.to_int (Q.sub msb2 msb1), Some s2)) in
         mk_fxd s msb lsb l
    | Fxd (Some s1, Some msb1, Some lsb1, l1), Fxd (Some s2, Some msb2, Some lsb2, l2) ->
      if Q.gt lsb1 msb2 then mk_fxd (Some s1) (Some msb1) (Some lsb2) l1
