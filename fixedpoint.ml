@@ -222,8 +222,16 @@ let sem_times x y = match x, y with
       | Some a1, Some a2 -> Some (Q.add a1 a2) in
     let l = if l1 > 0 && l2 > 0 then 1 else 0 in
     mk_fxd s msb lsb l
-    
-let sem_div x y = top
+
+
+let inv x = match x with
+|Bot | Zero -> bottom
+|Fxd(sgn, Some(msb), Some(lsb), g) when is_power_of_two x -> Fxd(sgn, (Some (Q.neg msb)), (Some (Q.neg msb)), 1)
+|Fxd(sgn, Some(msb), lsb, g) when g > 0 -> Fxd(sgn, (Some(Q.sub (Q.neg msb) Q.one)), None, 1)
+|Fxd(sgn, msb, Some(lsb), g) -> Fxd(sgn, Some(Q.neg (Q.add Q.one lsb)), None, 0)
+|Fxd(sgn, _, _, _) -> Fxd(sgn, None, None, 0)
+
+let sem_div x y = sem_times x (inv y)
 	  
 let sem_geq0 x = match x with
 |Zero -> Zero
