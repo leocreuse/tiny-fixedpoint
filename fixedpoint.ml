@@ -209,7 +209,17 @@ let sem_times x y = match x, y with
     let s = match s1, s2 with
 	  | None, _ | _, None -> None
 	  | Some s1, Some s2 -> Some (s1 = s2) in
-	mk_fxd s (Some (Q.add msb2 msb1)) (Some (Q.add lsb2 msb1)) l2
+  mk_fxd s (Some (Q.add msb2 msb1)) (Some (Q.add lsb2 msb1)) l2
+  | Fxd (s1, Some msb1, None, l1), Fxd (s2, Some msb2, _, _) when is_power_of_two y ->
+    	let s = match s1, s2 with
+	  | None, _ | _, None -> None
+	  | Some s1, Some s2 -> Some (s1 = s2) in
+  mk_fxd s (Some (Q.add msb1 msb2)) None l1
+  | Fxd (s1, Some msb1, _, _), Fxd (s2, Some msb2, None, l2) when is_power_of_two x ->
+    let s = match s1, s2 with
+	  | None, _ | _, None -> None
+	  | Some s1, Some s2 -> Some (s1 = s2) in
+  mk_fxd s (Some (Q.add msb2 msb1)) None l2
   | Fxd (s1, msb1, lsb1, l1), Fxd (s2, msb2, lsb2, l2) ->
     let s = match s1, s2 with
       | None, _ | _, None -> None
