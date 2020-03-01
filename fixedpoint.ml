@@ -251,7 +251,7 @@ let sem_geq0 x = match x with
 
 let sem_call _ _ = top
 
-let backsem_plus x y r = x, y
-let backsem_minus x y r = x, y
-let backsem_times x y r = x, y
-let backsem_div x y r = x, y
+let backsem_plus x y r = (sem_minus r x), (sem_minus r y)
+let backsem_minus x y r = (sem_plus y r), (sem_minus x r)
+let backsem_times x y r = (sem_div r y), (sem_div r x)
+let backsem_div x y r = (sem_times r y), (sem_div x r)
